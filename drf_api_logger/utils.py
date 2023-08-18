@@ -1,5 +1,7 @@
+import json
 import re
 from django.conf import settings
+from django.core.files.uploadedfile import InMemoryUploadedFile
 
 SENSITIVE_KEYS = ['password', 'token', 'access', 'refresh']
 if hasattr(settings, 'DRF_API_LOGGER_EXCLUDE_KEYS'):
@@ -74,3 +76,27 @@ def mask_sensitive_data(data, mask_api_parameters=False):
             data[key] = [mask_sensitive_data(item) for item in data[key]]
 
     return data
+
+
+def get_request_data(request):
+    content_type = request.content_type
+    
+    request_data = ''
+    if content_type == '' or content_type.startswith("multipart/form-data") or content_type == "application/x-www-form-urlencoded":
+        request_data = _parse_multipart_data_to_dict(request) if request.POST or request.FILES else ''
+    else:
+        request_data = json.loads(request.body) if request.body else ''
+    return request_data
+
+
+def _parse_multipart_data_to_dict(request):
+    items = {}
+
+    form_data = request.POST
+    for key, value in form_data.items():
+        items[key] = value[0] if isinstance(value, list) else value
+
+    form_files = request.FILES
+    for key, value in form_files.items():
+        items[key] = dict(name=value.name,size=value.size, content_type=value.content_type)
+    return items

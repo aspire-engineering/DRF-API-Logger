@@ -14,7 +14,7 @@
 
 An API Logger for your Django Rest Framework project.
 
-It logs all the API information for content type "application/json".
+It logs all the API information for the some content types ("application/json", "multipart/form-data", "application/x-www-form-urlencoded").
 1. URL
 2. Request Body
 3. Request Headers

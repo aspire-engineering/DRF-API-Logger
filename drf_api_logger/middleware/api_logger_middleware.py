@@ -133,7 +133,7 @@ class APILoggerMiddleware:
                 return response
 
             if response.get('content-type') in (
-                    'application/json', 'application/vnd.api+json', 'application/gzip', 'application/octet-stream'):
+                    'application/json', 'application/vnd.api+json', 'application/gzip', 'application/octet-stream', 'text/html'):
 
                 if response.get('content-type') == 'application/gzip':
                     response_body = '** GZIP Archive **'
@@ -143,7 +143,10 @@ class APILoggerMiddleware:
                     response_body = '** Streaming **'
                 else:
                     if type(response.content) == bytes:
-                        response_body = json.loads(response.content.decode())
+                        try:
+                            response_body = json.loads(response.content.decode())
+                        except json.JSONDecodeError:
+                            response_body = response.content.decode()
                     else:
                         response_body = json.loads(response.content)
                 if self.DRF_API_LOGGER_PATH_TYPE == 'ABSOLUTE':

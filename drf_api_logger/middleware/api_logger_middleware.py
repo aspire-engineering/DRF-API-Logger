@@ -1,6 +1,7 @@
 import importlib
 import json
 import time
+import traceback
 import uuid
 
 from django.conf import settings
@@ -72,6 +73,10 @@ class APILoggerMiddleware:
             mod = importlib.import_module(mod_name)
             self.tracing_func_name = getattr(mod, func_name)
 
+    def process_exception(self, request, exception):
+        # Set the stack trace for 500 erorrs
+        self.stack_trace = traceback.format_exc()
+
     def __call__(self, request):
 
         # Run only if logger is enabled.
@@ -135,20 +140,24 @@ class APILoggerMiddleware:
             if response.get('content-type') in (
                     'application/json', 'application/vnd.api+json', 'application/gzip', 'application/octet-stream', 'text/html'):
 
-                if response.get('content-type') == 'application/gzip':
-                    response_body = '** GZIP Archive **'
-                elif response.get('content-type') == 'application/octet-stream':
-                    response_body = '** Binary File **'
-                elif getattr(response, 'streaming', False):
-                    response_body = '** Streaming **'
+                stack_trace = getattr(self, "stack_trace", None)
+                if stack_trace:
+                    response_body = stack_trace # This means it's a 500 error
                 else:
-                    if type(response.content) == bytes:
-                        try:
-                            response_body = json.loads(response.content.decode())
-                        except json.JSONDecodeError:
-                            response_body = response.content.decode()
+                    if response.get('content-type') == 'application/gzip':
+                        response_body = '** GZIP Archive **'
+                    elif response.get('content-type') == 'application/octet-stream':
+                        response_body = '** Binary File **'
+                    elif getattr(response, 'streaming', False):
+                        response_body = '** Streaming **'
                     else:
-                        response_body = json.loads(response.content)
+                        if type(response.content) == bytes:
+                            try:
+                                response_body = json.loads(response.content.decode())
+                            except json.JSONDecodeError:
+                                response_body = response.content.decode()
+                        else:
+                            response_body = json.loads(response.content)
                 if self.DRF_API_LOGGER_PATH_TYPE == 'ABSOLUTE':
                     api = request.build_absolute_uri()
                 elif self.DRF_API_LOGGER_PATH_TYPE == 'FULL_PATH':

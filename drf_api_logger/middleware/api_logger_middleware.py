@@ -73,6 +73,9 @@ class APILoggerMiddleware:
             mod = importlib.import_module(mod_name)
             self.tracing_func_name = getattr(mod, func_name)
 
+        self.DRF_API_LOG_SERVER_ERROR = getattr(settings, "DRF_API_LOG_SERVER_ERROR", False)
+        
+
     def process_exception(self, request, exception):
         # Set the stack trace for 500 erorrs
         self.stack_trace = traceback.format_exc()
@@ -135,6 +138,10 @@ class APILoggerMiddleware:
 
             # Log only registered methods if available.
             if len(self.DRF_API_LOGGER_METHODS) > 0 and method not in self.DRF_API_LOGGER_METHODS:
+                return response
+            
+            # This means do not log 500 errors
+            if response.get('content-type') == 'text/html' and not self.DRF_API_LOG_SERVER_ERROR:
                 return response
 
             if response.get('content-type') in (

@@ -146,9 +146,8 @@ class APILoggerMiddleware:
 
             if response.get('content-type') in (
                     'application/json', 'application/vnd.api+json', 'application/gzip', 'application/octet-stream', 'text/html'):
-
-                stack_trace = getattr(self, "stack_trace", None)
-                if stack_trace:
+                if getattr(response, 'status_code', None) == 500:
+                    stack_trace = getattr(self, "stack_trace", None)
                     response_body = stack_trace # This means it's a 500 error
                 else:
                     if response.get('content-type') == 'application/gzip':
